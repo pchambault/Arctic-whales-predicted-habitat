@@ -1,5 +1,5 @@
 # Arctic-whales-predicted-habitat
-This repository contains code and data necessary to generate the analyses and figures associated with the manuscript entitled "Future seasonal changes in habitat for Arctic whales during predicted ocean warming" (in press., Science Advances). Manuscript authors: Philippine Chambault, Kit M. Kovacs, Christian Lydersen, Olga Shpak, Jonas Teilmann, Christoffer M. Albertsen, Mads Peter Heide-Jørgensen.
+This repository contains code and data necessary to generate the analyses and figures associated with the manuscript entitled "Future seasonal changes in habitat for Arctic whales during predicted ocean warming" (2022, Science Advances). Manuscript authors: Philippine Chambault, Kit M. Kovacs, Christian Lydersen, Olga Shpak, Jonas Teilmann, Christoffer M. Albertsen, Mads Peter Heide-Jørgensen.
 
 The repository is organized as follows:
 
