@@ -1,0 +1,1041 @@
+---
+title: "Future projections from HadGEM3-GC31-MM model (6 variables, best algo from ffs)"
+author: "Philippine Chambault"
+date: "03/09/2022"
+output: 
+  bookdown::html_document2:
+    number_sections: yes
+    code_folding: show
+    df_print: default
+    fig_caption: yes
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  fig.align = "center",
+  message = FALSE,
+  warning = FALSE,
+  cache   = FALSE,
+  out.width = "100%",
+  comment = NA
+)
+```
+```{r global_options, include=FALSE}
+library(viridis)
+library(raster)
+library(maps)
+library(gridExtra)
+library(tidyquant)
+library(tidyverse)
+library(dplyr)
+library(RColorBrewer)
+library(ggmap)
+library(dplyr)
+library(ncdf4)
+library(fields)
+library(rgeos)
+```
+
+
+# Context 
+
+One GCM at a 25 km resolution were tested ("HadGEM3-GC31-MM"), including _Sea Surface Temperature_ (tos), _Sea Surface Salinity_ (sos), _Sea Surface Height_ (zos) and _Mixed Layer Depth_ (mlotst). These 4 dynamic variables were first (i) extracted from CMIP6 for the historical period (1993-2014) and contemporary period (2015-2020) from ssp126. Then, each variable was included in the initial models run on the available dataset (current predictions: "present").
+
+The results here are presented for summer only.
+
+
+
+
+
+
+
+# Model performance {.tabset}
+
+```{r, echo=F}
+model = "HadGEM3-GC31-MM"
+
+perf <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/5.CARET/Performance/PerfMOD_Summer_7algo_6var_3sp_",model,"_.rds"))
+perf = perf %>%
+  dplyr::select(-c(precision,recall,preval))
+
+pivot = perf %>%
+  pivot_longer(!c(model,species,side,run), 
+               names_to = "metric", values_to = "value")  
+```
+
+## Bowheads
+```{r, echo=F}
+best = pivot %>%
+  filter(species=="Bw") %>%
+  mutate(type = case_when(
+  side == "West" & model == "blackboost" ~ "Highlighted",
+  side == "East" & model == "glmboost" ~ "Highlighted"))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4.5,fig.cap="\\label{fig:figs}Boxplot of the performance metrics for bowheads in summer."}
+ggplot(best, aes(x=model, y=value,colour=type)) +
+  geom_boxplot(outlier.shape = NA, lwd=0.2, fatten=0.2) +
+  labs(y="", x="", title = "Performance metrics in Summer",
+       subtitle="Bowheads") +
+  facet_grid(side~metric) +
+  scale_colour_manual(values=c("red", "black")) +
+  ylim(0,1) +
+  geom_hline(yintercept = 0.5, lwd=0.2, lty=2) +
+  theme_tq() +
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_text(size=7,color="black"),
+        axis.title.x = element_text(size=7,color="black"),
+        axis.text.x  = element_text(size=7,angle=90,vjust=0.5,hjust=0.5,color="black"),
+        axis.text.y  = element_text(size=7,color="black"))
+```
+
+
+
+
+## Narwhals
+```{r, echo=F}
+best = pivot %>%
+  filter(species=="Nar") %>%
+  mutate(type = case_when(
+  side == "West" & model == "blackboost" ~ "Highlighted",
+  side == "East" & model == "blackboost" ~ "Highlighted"))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4.5,fig.cap="\\label{fig:figs}Boxplot of the performance metrics for narwhals in summer."}
+ggplot(best, aes(x=model, y=value, colour=type)) +
+  geom_boxplot(outlier.shape = NA, lwd=0.2, fatten=0.2) +
+  labs(y="", x="", title = "Performance metrics in Summer",
+       subtitle="Narwhals ") +
+  facet_grid(side~metric) +
+  ylim(0,1) +
+  scale_colour_manual(values=c("red", "black")) +
+  geom_hline(yintercept = 0.5, lwd=0.2, lty=2) +
+  theme_tq() +
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_text(size=7,color="black"),
+        axis.title.x = element_text(size=7,color="black"),
+        axis.text.x  = element_text(size=7,angle=90,vjust=0.5,hjust=0.5,color="black"),
+        axis.text.y  = element_text(size=7,color="black"))
+```
+The _Random Forest_ suffers from overfitting, so the best algorithm is the _blackboost_ for narwhals East and West. 
+
+
+
+## Belugas
+```{r, echo=F}
+best = pivot %>%
+  filter(species=="Bel") %>%
+  mutate(type = case_when(model == "blackboost" ~ "Highlighted"))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=3,fig.cap="\\label{fig:figs}Boxplot of the performance metrics for belugas in summer."}
+ggplot(best, aes(x=model, y=value, colour=type)) +
+  geom_boxplot(outlier.shape = NA, lwd=0.2, fatten=0.2) +
+  labs(y="", x="", title = "Performance metrics in Summer",
+       subtitle="Belugas") +
+  facet_grid(.~metric) +
+  ylim(0,1) +
+  scale_colour_manual(values=c("red", "black")) +
+  geom_hline(yintercept = 0.5, lwd=0.2, lty=2) +
+  theme_tq() +
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_text(size=7,color="black"),
+        axis.title.x = element_text(size=7,color="black"),
+        axis.text.x  = element_text(size=7,angle=90,vjust=0.5,hjust=0.5,color="black"),
+        axis.text.y  = element_text(size=7,color="black"))
+```
+The best algo is the _blackboost_ for belugas.
+
+
+
+
+
+
+
+
+
+
+# Belugas {.tabset}
+
+```{r, echo=F}
+north_map = map_data("world") %>% group_by(group)
+shore     = north_map[north_map$region=="Canada" 
+                      | north_map$region=="Greenland"
+                      | north_map$region=="Norway"
+                      | north_map$region=="Russia"
+                      | north_map$region=="Sweden"
+                      | north_map$region=="Denmark"
+                      | north_map$region=="Finland"
+                      | north_map$region=="Iceland",]
+
+```
+
+## Present
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/5.CARET/Bel_West/Predictions/Summer/",model,"/Average_6var_bestAlgo/PredMean_ffs_bestAlgo_Summer_6var_",model,"_Bel_West.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Max prediction maps for belugas in present summer from the BRT."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") + 
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Summer present, BRT") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+## Mean 2030
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bel_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bel_West_2030.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Belugas in summer 2030 from the BRT (ssp126)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Mean Summer 2030 (BRT, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bel_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bel_West_2030.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Belugas in summer 2030 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Mean Summer 2030 (BRT, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+## Mean 2060
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bel_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bel_West_2060.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Belugas in summer 2060 from the BRT (ssp126)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Mean Summer 2060 (BRT, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bel_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bel_West_2060.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Belugas in summer 2060 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Mean Summer 2060 (BRT, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+## Mean 2100
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bel_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bel_West_2100.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Belugas in summer 2100 from the BRT (ssp126)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Mean Summer 2100 (BRT, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+m <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bel_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bel_West_2100.rds"))
+m <- as_tibble(rasterToPoints(m))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Belugas in summer 2100 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=m, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,-40), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Belugas",
+       subtitle="Mean Summer 2100 (BRT, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Narwhals {.tabset}
+
+## Present 
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/5.CARET/Nar_West/Predictions/Summer/",model,"/Average_6var_bestAlgo/PredMean_ffs_bestAlgo_Summer_6var_",model,"_Nar_West.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/5.CARET/Nar_East/Predictions/Summer/",model,"/Average_6var_bestAlgo/PredMean_ffs_bestAlgo_Summer_6var_",model,"_Nar_East.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean prediction maps for Narwhals in present summer from the BRT."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Summer present, BRT") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+## Mean 2030 
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_West_2030.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_East/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_East_2030.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Narwhals in summer 2030 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Mean Summer 2030 (BRT, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_West_2030.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_East/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_East_2030.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Narwhals in summer 2030 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Mean Summer 2030 (BRT, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+
+## Mean 2060
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_West_2060.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_East/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_East_2060.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Narwhals in summer 2060 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Mean Summer 2060 (BRT, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_West_2060.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_East/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_East_2060.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Narwhals in summer 2060 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Mean Summer 2060 (BRT, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+
+
+## Mean 2100 
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_West_2100.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_East/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_East_2100.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Narwhals in summer 2100 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Mean Summer 2100 (BRT, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_West_2100.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Nar_East/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Nar_east_2100.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Narwhals in summer 2100 from the BRT (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  coord_map("azequidistant", xlim=c(-105,0), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Narwhals",
+       subtitle="Mean Summer 2100 (BRT, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+# Bowheads {.tabset}
+
+## Present (BRT)
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/5.CARET/Bw_West/Predictions/Summer/",model,"/Average_6var_bestAlgo/PredMean_ffs_bestAlgo_Summer_6var_",model,"_Bw_West.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/5.CARET/Bw_East/Predictions/Summer/",model,"/Average_6var_bestAlgo/PredMean_ffs_bestAlgo_Summer_6var_",model,"_Bw_East.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean prediction maps for Bowheads in present summer from the BRT and GLM"}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") +
+  # geom_tile(data=west, aes(x,y, fill=layer)) +
+  # geom_tile(data=east, aes(x,y, fill=layer)) +
+  # scale_fill_distiller(palette="BuPu", direction=1,
+  #                      limits=c(0,1), breaks=seq(0,1,by=0.2)) +
+  coord_map("azequidistant", xlim=c(-105,80), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Bowheads",
+       subtitle="Summer present, BRT and GLM") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+
+
+
+## Mean 2030
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_West_2030.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_East/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_East_2030.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Bowheads in summer 2030 from the BRT and GLM (ssp126)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") + 
+  coord_map("azequidistant", xlim=c(-105,80), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Bowheads",
+       subtitle="Mean Summer 2030 (BRT and GLM, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_West_2030.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_East/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_East_2030.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Bowheads in summer 2030 from the BRT and GLM (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") + 
+  coord_map("azequidistant", xlim=c(-105,80), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Bowheads",
+       subtitle="Mean Summer 2030 (BRT and GLM, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+
+
+
+
+## Mean 2100
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_West/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_West_2100.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_East/0.25deg/Summer/",model,"_ssp126/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_East_2100.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Bowheads in summer 2100 from the BRT and GLM (ssp126)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") + 
+  coord_map("azequidistant", xlim=c(-105,80), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Bowheads",
+       subtitle="Mean Summer 2100 (BRT and GLM, ssp126)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
+
+
+```{r, echo=F}
+west <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_West/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_West_2100.rds"))
+west <- as_tibble(rasterToPoints(west))
+
+east <- readRDS(paste0("/Users/philippinechambault/Documents/POST-DOC/2021/PAPER3/RDATA/6.Climatic_projections/Bw_East/0.25deg/Summer/",model,"_ssp585/Average_6var/ProjMean_Summer_0.25deg_6var_10runs_bestAlgo_Bw_East_2100.rds"))
+east <- as_tibble(rasterToPoints(east))
+```
+
+```{r, echo=FALSE, fig.pos="placeHere", fig.height=4,fig.cap="\\label{fig:figs}Mean projection maps for Bowheads in summer 2100 from the BRT and GLM (ssp585)."}
+ggplot(shore, aes(long, lat)) +
+  geom_contour_filled(data=west, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  geom_contour_filled(data=east, aes(x,y,z=layer), breaks=seq(0,1,by=0.2)) +
+  scale_fill_brewer(palette="BuPu") + 
+  coord_map("azequidistant", xlim=c(-105,80), ylim=c(60,80)) +
+  scale_y_continuous(breaks=c(60,70), labels=c(60,70)) +
+  geom_polygon(aes(group=group), fill="lightgrey",lwd=1) +
+  labs(y="",x="",fill="Habitat \nsuitability",title="Bowheads",
+       subtitle="Mean Summer 2100 (BRT and GLM, ssp585)") + 
+  theme(axis.text.y  = element_blank(),
+        axis.text.x  = element_blank(),
+        axis.ticks   = element_blank(),
+        strip.background = element_rect(fill="gray52", size=0.1),
+        strip.text = element_text(colour='black',size=12,face="bold",
+                                  margin=margin(0.1,0.1,0.1,0.1,"cm")),
+        axis.title = element_text(size=12,face="bold", hjust=0.5),
+        panel.border = element_rect(colour="black",fill=NA,size=0.2),
+        legend.key.size = unit(0.5,"line"),
+        legend.key.width = unit(0.14,"cm"),
+        legend.key.height = unit(0.3,"cm"),
+        legend.title = element_text(size=7),
+        legend.text = element_text(size=7),
+        legend.box.spacing = unit(0.1,'cm'),
+        legend.margin=margin(t=-0.0, unit='cm'),
+        legend.key = element_blank(),
+        panel.spacing.x = unit(0.07, "lines"),
+        panel.spacing.y = unit(0.07, "lines"),
+        title = element_text(colour="black",size=14,face="bold"),
+        plot.title=element_text(size=14, vjust=-0.5, hjust=0),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(colour="gray52", size=0.1),
+        plot.margin = unit(c(0,0.1,-1,-0.4),"cm")) 
+```
